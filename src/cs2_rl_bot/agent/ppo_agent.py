@@ -118,12 +118,27 @@ class PPOAgent:
         action, _state = self._model.predict(obs, deterministic=False)
         return action  # type: ignore[no-any-return]
 
-    def learn(self, total_timesteps: int) -> None:
+    @property
+    def model(self) -> Any:
+        """SB3 model handle, for advanced consumers (callbacks, learn args)."""
+        return self._model
+
+    def learn(
+        self,
+        total_timesteps: int,
+        *,
+        callback: Any | None = None,
+        reset_num_timesteps: bool = True,
+    ) -> None:
         logger.warning(
-            "Starting PPO training for {} timesteps — this is a real training run.",
+            "Starting PPO training for {} timesteps -- this is a real training run.",
             total_timesteps,
         )
-        self._model.learn(total_timesteps=total_timesteps)
+        self._model.learn(
+            total_timesteps=total_timesteps,
+            callback=callback,
+            reset_num_timesteps=reset_num_timesteps,
+        )
 
     def save(self, path: str | Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)

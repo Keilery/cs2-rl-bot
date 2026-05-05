@@ -119,3 +119,38 @@ transitions. For PPO with `n_steps=2048` you get a gradient update every ~1.2
 rounds. Reaching even modest competence (consistently winning vs `bot_easy`)
 will require **hundreds of rounds**, i.e. several hours of wall-clock time on
 a single machine.
+
+## Run directories
+
+Each training run gets a self-contained directory (`runs/<run_id>/`) holding
+its config snapshot, checkpoints, tensorboard logs, and two coordination
+files:
+
+* `status.json` — written by the trainer on every step (or every Nth step
+  depending on `MetricsCallback.write_every_steps`). Holds current step,
+  rounds completed, last K rewards, kills/deaths/damage, capture FPS, error
+  message if any.
+* `control.json` — written by the dashboard (or `DashboardClient`) to ask
+  the trainer to pause / resume / save a checkpoint / stop. The trainer
+  polls this file via `TrainingControlCallback`. A monotonic `revision`
+  counter dedupes already-handled commands.
+
+Both files use atomic writes (temp file + `fsync` + `rename`) so that a
+reader never observes partial JSON.
+
+## Imitation learning (BC) → PPO
+
+For warm-starting PPO, demo files (`.dem`) are parsed via `demoparser2`
+into `(observation, action)` pairs. The behaviour cloning step trains a
+small MLP over the **scalar observation head only** — demo files don't
+contain frame pixels, so the CNN stack still needs to learn from scratch
+during PPO. The BC weights are persisted as
+`runs/<bc_run_id>/checkpoints/bc_policy.pt` and loaded as initial weights
+when PPO is launched with `--resume <bc_run_id>`.
+
+## YOLO fine-tune
+
+`cs2-rl-bot train-yolo` wraps `ultralytics.YOLO.train()` and saves the
+resulting weights under `runs/<yolo_run_id>/checkpoints/yolo.pt`. The
+Roboflow Universe SDK is used as the default dataset source; supply a
+`ROBOFLOW_API_KEY` env var if you want automatic dataset downloads.
