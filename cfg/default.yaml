@@ -1,0 +1,58 @@
+# Default configuration. Override via:
+#   * a YAML file passed with --config / -c
+#   * environment variables prefixed CS2BOT_ (e.g. CS2BOT_AGENT__ALGO=random)
+gsi:
+  host: 127.0.0.1
+  port: 3000
+  auth_token: CHANGE_ME_DEVIN
+  request_timeout_s: 1.0
+
+capture:
+  monitor_index: 1
+  target_fps: 30
+  resize_to: [84, 84]
+  grayscale: false
+
+vision:
+  enabled: false
+  model_path: models/yolov8n.pt
+  confidence_threshold: 0.35
+  iou_threshold: 0.45
+  device: auto
+
+controller:
+  backend: noop          # noop | pydirectinput | pynput
+  mouse_sensitivity: 2.0
+  max_mouse_delta: 200
+  safety_kill_key: f9
+
+agent:
+  algo: ppo              # ppo | random | scripted
+  policy: MultiInputPolicy
+  learning_rate: 3.0e-4
+  n_steps: 2048
+  batch_size: 64
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  checkpoint_dir: checkpoints/
+  tensorboard_log: tensorboard/
+
+rewards:
+  kill_bonus: 1.0
+  death_penalty: -1.0
+  damage_dealt_coef: 0.01
+  damage_taken_coef: -0.01
+  round_win_bonus: 2.0
+  round_loss_penalty: -1.0
+  bomb_plant_bonus: 0.5
+  bomb_defuse_bonus: 0.5
+  survival_per_step: 0.001
+  kill_switch_penalty: -0.1
+
+seed: 42
+log_level: INFO
+dry_run: true            # MUST be set to false (and acknowledged) before training
