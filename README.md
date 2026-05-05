@@ -88,8 +88,22 @@ cs2-rl-bot dump-cfg cfg/default.yaml             # write defaults to YAML
 cs2-rl-bot gsi                                   # GSI listener (debug)
 cs2-rl-bot capture                               # capture one frame
 cs2-rl-bot inference --max-steps 500             # run agent without learning
+
+# Training (requires --i-understand-the-risks because of VAC)
 cs2-rl-bot train --steps 100000 \
-    --i-understand-the-risks                     # PPO training
+    --save-every 10000 --i-understand-the-risks
+cs2-rl-bot train --resume <run_id> --steps 100000 \
+    --i-understand-the-risks                     # resume + extend a run
+
+# Run management
+cs2-rl-bot runs                                  # list training runs
+cs2-rl-bot dashboard <run_id>                    # live progress + p/r/s/q hotkeys
+cs2-rl-bot menu                                  # interactive launcher
+
+# Imitation learning + YOLO
+cs2-rl-bot parse-demo path/to/match.dem          # inspect a demo
+cs2-rl-bot pretrain-bc path/to/demos/            # behaviour cloning warm-start
+cs2-rl-bot train-yolo path/to/data.yaml          # finetune YOLOv8
 ```
 
 Override any config value via env vars: `CS2BOT_<SECTION>__<FIELD>=value`.
@@ -99,6 +113,45 @@ CS2BOT_AGENT__ALGO=random \
 CS2BOT_DRY_RUN=true \
 cs2-rl-bot inference
 ```
+
+## Training run layout
+
+Every training run gets its own directory under `runs/`:
+
+```
+runs/<run_id>/
+├── meta.json                # kind / status / parent run
+├── config.yaml              # snapshot of the config used
+├── status.json              # live metrics (read by dashboard)
+├── control.json             # pause / resume / stop / save signals
+├── checkpoints/             # ppo_step_*.zip, ppo_final_*.zip, bc_policy.pt, yolo.pt
+├── tensorboard/             # SB3 / YOLO tensorboard event files
+└── logs/
+```
+
+The dashboard polls `status.json` and writes commands to `control.json`. Three
+SB3 callbacks are wired in by default:
+
+* **TrainingControlCallback** — honours pause / stop / save commands.
+* **RoundCheckpointCallback** — saves at the end of every CS2 round and every
+  N steps. Keeps the last K checkpoints by default.
+* **MetricsCallback** — records per-round kills / deaths / damage / reward
+  to TensorBoard and `status.json`.
+
+## Hybrid training (BC -> PPO)
+
+To warm-start PPO from `.dem` files instead of random weights:
+
+```bash
+pip install -e '.[demos]'                        # demoparser2 + pandas
+cs2-rl-bot pretrain-bc path/to/demos/            # creates runs/bc-...
+cs2-rl-bot train --resume <bc_run_id> \
+    --steps 200000 --i-understand-the-risks
+```
+
+The behaviour-cloning step trains an MLP over the scalar observation head only
+(demo files don't include frame pixels). PPO then continues training that
+policy through interaction with the live game.
 
 ## License
 
