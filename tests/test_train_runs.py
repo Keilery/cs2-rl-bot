@@ -69,6 +69,8 @@ def test_train_creates_run_dir_and_calls_learn(monkeypatch, tmp_path: Path) -> N
 
     monkeypatch.setattr(train_mod, "PPOAgent", _StubAgent)
     monkeypatch.setattr(train_mod, "CS2Env", _StubEnv)
+    # The real wrapper requires a gymnasium.Env; sidestep it for this stub.
+    monkeypatch.setattr(train_mod, "FlatActionWrapper", lambda env: env)
 
     handle = train(
         cfg,

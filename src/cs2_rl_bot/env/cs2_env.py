@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 import gymnasium as gym
 import numpy as np
@@ -36,7 +36,6 @@ from cs2_rl_bot.observation.screen_capture import ScreenCapture
 from cs2_rl_bot.observation.state import Frame, Observation, PlayerState, RoundState
 from cs2_rl_bot.observation.vision import EnemyDetector
 from cs2_rl_bot.utils.config import AppConfig
-from cs2_rl_bot.utils.logging import logger
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -162,7 +161,7 @@ def encode_scalars(obs: Observation) -> np.ndarray:
 class CS2Env(gym.Env[dict[str, np.ndarray], dict[str, Any]]):
     """Gymnasium environment wrapping a live CS2 client (or a stub provider)."""
 
-    metadata = {"render_modes": []}
+    metadata: ClassVar[dict[str, Any]] = {"render_modes": []}
 
     def __init__(
         self,
@@ -250,4 +249,4 @@ class CS2Env(gym.Env[dict[str, np.ndarray], dict[str, Any]]):
 
 def _ensure_unused() -> None:
     """Compile-time check that ``Frame`` is referenced from the type checker."""
-    _ = Frame  # noqa: F841
+    _ = Frame
