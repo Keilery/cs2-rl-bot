@@ -26,6 +26,7 @@ dependencies = [
     "stable-baselines3>=2.3,<3.0",
     "numpy>=1.26,<3.0",
     "torch>=2.2,<3.0",
+    "tensorboard>=2.13,<3.0",  # SB3 logs to TB whenever tensorboard_log is set
 
     # Observation
     "mss>=9.0,<11.0",            # screen capture
