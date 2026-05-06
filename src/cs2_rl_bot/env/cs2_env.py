@@ -34,7 +34,12 @@ from cs2_rl_bot.env.rewards import RewardCalculator
 from cs2_rl_bot.observation.gsi_server import GSIState, run_server
 from cs2_rl_bot.observation.screen_capture import ScreenCapture
 from cs2_rl_bot.observation.state import Frame, Observation, PlayerState, RoundState
-from cs2_rl_bot.observation.vision import EnemyDetector
+from cs2_rl_bot.observation.vision import (
+    ENEMY_FEATURE_DIM,
+    Detection,
+    EnemyDetector,
+    encode_enemy_features,
+)
 from cs2_rl_bot.utils.config import AppConfig
 
 if TYPE_CHECKING:
@@ -99,7 +104,9 @@ class _LiveObservationProvider:
 
         frame = self._capture.latest(timeout=0.05)
         if frame is not None and self._config.vision.enabled:
-            detections = self._detector.detect(frame.image)
+            # Run YOLO on the full-res frame when available — the 84x84 policy
+            # frame is too small for reliable detection.
+            detections = self._detector.detect(frame.detection_image)
             frame.detections = [d.as_dict() for d in detections]
 
         return Observation(
@@ -113,6 +120,7 @@ class _LiveObservationProvider:
 def _build_observation_space(config: AppConfig) -> spaces.Dict:
     h, w = config.capture.resize_to
     channels = 1 if config.capture.grayscale else 3
+    enemy_dim = config.vision.max_enemy_slots * ENEMY_FEATURE_DIM
     return spaces.Dict(
         {
             "frame": spaces.Box(low=0, high=255, shape=(h, w, channels), dtype=np.uint8),
@@ -120,6 +128,12 @@ def _build_observation_space(config: AppConfig) -> spaces.Dict:
                 low=-1.0,
                 high=1.0,
                 shape=(_SCALAR_DIM,),
+                dtype=np.float32,
+            ),
+            "enemies": spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(enemy_dim,),
                 dtype=np.float32,
             ),
         }
@@ -244,7 +258,46 @@ class CS2Env(gym.Env[dict[str, np.ndarray], dict[str, Any]]):
             frame_array = np.zeros((h, w, channels), dtype=np.uint8)
         if frame_array.ndim == 2:
             frame_array = frame_array[..., None]
-        return {"frame": frame_array, "scalars": encode_scalars(obs)}
+        return {
+            "frame": frame_array,
+            "scalars": encode_scalars(obs),
+            "enemies": self._encode_enemies(obs),
+        }
+
+    def _encode_enemies(self, obs: Observation) -> np.ndarray:
+        max_slots = self._config.vision.max_enemy_slots
+        if obs.frame is None:
+            return np.zeros(max_slots * ENEMY_FEATURE_DIM, dtype=np.float32)
+        # Detections may be raw dicts (from a stub provider) or Detection
+        # instances (from the live detector). Normalise to Detection.
+        detections: list[Detection] = []
+        for d in obs.frame.detections:
+            if isinstance(d, Detection):
+                detections.append(d)
+            elif isinstance(d, dict):
+                bbox = tuple(int(v) for v in d.get("bbox", (0, 0, 0, 0)))
+                if len(bbox) != 4:
+                    continue
+                detections.append(
+                    Detection(
+                        cls=str(d.get("cls", "")),
+                        confidence=float(d.get("confidence", 0.0)),
+                        bbox=(bbox[0], bbox[1], bbox[2], bbox[3]),
+                        team=d.get("team"),
+                        is_head=bool(d.get("is_head", False)),
+                    )
+                )
+        # The detection image is what the bboxes are referenced against —
+        # full-res when available, otherwise the policy-sized frame.
+        det_image = obs.frame.detection_image
+        h = det_image.shape[0] if det_image.ndim >= 2 else 0
+        w = det_image.shape[1] if det_image.ndim >= 2 else 0
+        return encode_enemy_features(
+            detections,
+            image_shape=(h, w),
+            our_team=obs.player.team,
+            max_slots=max_slots,
+        )
 
 
 def _ensure_unused() -> None:

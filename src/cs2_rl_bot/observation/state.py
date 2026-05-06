@@ -130,15 +130,28 @@ class RoundState:
 
 @dataclass(slots=True)
 class Frame:
-    """A single captured frame, optionally with vision detections attached."""
+    """A single captured frame, optionally with vision detections attached.
 
-    image: np.ndarray  # (H, W, 3) uint8 RGB
+    ``image`` is the small, downsampled frame fed into the policy CNN (84x84
+    by default). ``image_full`` is the original-resolution capture used by
+    the YOLO detector — at policy resolution YOLO cannot resolve enemies
+    reliably. ``image_full`` is ``None`` when full-frame retention is
+    disabled (``capture.keep_full_frame=false``).
+    """
+
+    image: np.ndarray  # (H, W, 3) uint8 RGB — resized for policy
     timestamp: float
+    image_full: np.ndarray | None = None  # full-res RGB for vision
     detections: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def shape(self) -> tuple[int, int, int]:
         return self.image.shape  # type: ignore[return-value]
+
+    @property
+    def detection_image(self) -> np.ndarray:
+        """Best image to feed the YOLO detector (full-res when available)."""
+        return self.image_full if self.image_full is not None else self.image
 
 
 @dataclass(slots=True)

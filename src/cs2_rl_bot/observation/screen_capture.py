@@ -103,11 +103,14 @@ class ScreenCapture:
             while not self._stop.is_set():
                 start = time.perf_counter()
                 raw = np.asarray(sct.grab(monitor), dtype=np.uint8)  # BGRA
-                # Drop alpha and convert BGR -> RGB in one slice.
+                # Drop alpha and convert BGR -> RGB in one slice. The slice
+                # produces a non-contiguous view; copy when we want to hand it
+                # to YOLO so downstream consumers can hold onto it safely.
                 rgb = raw[:, :, [2, 1, 0]]
                 resized = _resize(rgb, self._config.resize_to, self._config.grayscale)
+                full = np.ascontiguousarray(rgb) if self._config.keep_full_frame else None
 
-                frame = Frame(image=resized, timestamp=time.time())
+                frame = Frame(image=resized, image_full=full, timestamp=time.time())
                 # Single-slot queue: drop the previous unread frame if any.
                 if self._queue.full():
                     with _suppress_empty():

@@ -54,8 +54,13 @@ def test_env_step_loop_runs_to_termination() -> None:
     obs, info = env.reset()
     assert "frame" in obs
     assert "scalars" in obs
+    assert "enemies" in obs
     assert obs["frame"].shape == (84, 84, 3)
     assert obs["scalars"].shape == (14,)
+    # Default config: 4 slots * 8 features per slot.
+    assert obs["enemies"].shape == (32,)
+    # No detections produced by the stub provider, so all slots are empty.
+    assert np.allclose(obs["enemies"], 0.0)
     assert "raw" in info
 
     terminated = False
