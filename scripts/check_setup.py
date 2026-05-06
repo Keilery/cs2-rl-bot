@@ -52,9 +52,10 @@ def main() -> int:
 
     obs, _ = env.reset()
     logger.info(
-        "obs.frame.shape={} obs.scalars.shape={}",
+        "obs.frame.shape={} obs.scalars.shape={} obs.enemies.shape={}",
         obs["frame"].shape,
         obs["scalars"].shape,
+        obs["enemies"].shape,
     )
 
     action = env.action_space.sample()

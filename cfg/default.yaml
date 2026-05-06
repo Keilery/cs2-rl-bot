@@ -12,13 +12,24 @@ capture:
   target_fps: 30
   resize_to: [84, 84]
   grayscale: false
+  # When true, every captured frame keeps a copy of the full-resolution RGB
+  # alongside the 84x84 policy frame. Required for YOLO to detect anything
+  # useful — 84x84 enemies are ~1 pixel wide.
+  keep_full_frame: true
 
 vision:
   enabled: false
+  # Drop a CS2-finetuned YOLOv8 here. Suggested: Vombit's gated HF model
+  #   https://huggingface.co/Vombit/yolov8n_cs2 (CC BY-NC-ND 4.0)
+  # download yolov8n_cs2.pt and point this at it.
   model_path: models/yolov8n.pt
   confidence_threshold: 0.35
   iou_threshold: 0.45
   device: auto
+  # Number of nearest-to-crosshair enemies exposed to the policy each step
+  # (extra slots are zero-padded). Each slot is 8 floats: valid, dx, dy,
+  # width, height, is_head, is_enemy, confidence.
+  max_enemy_slots: 4
 
 controller:
   backend: noop          # noop | pydirectinput | pynput

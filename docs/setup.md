@@ -136,10 +136,19 @@ cs2-rl-bot menu
 YOLOv8 is disabled by default. To enable:
 
 1. `pip install -e '.[vision]'`
-2. Drop a fine-tuned `*.pt` weights file into `models/` (see
-   [`architecture.md`](architecture.md)).
-3. Set `vision.enabled: true` and `vision.model_path: models/your_model.pt`
+2. Drop a fine-tuned `*.pt` weights file into `models/`. The fastest path is
+   the community-trained Vombit model (CC BY-NC-ND 4.0, personal use):
+   download `yolov8n_cs2.pt` from
+   <https://huggingface.co/Vombit/yolov8n_cs2> after agreeing to the
+   licence on the model page, and save it as `models/yolov8n_cs2.pt`.
+3. Set `vision.enabled: true` and `vision.model_path: models/yolov8n_cs2.pt`
    in `cfg/default.yaml`.
+
+When vision is on the policy receives, in addition to the 84x84 frame, an
+`enemies` vector with the nearest few detections (dx, dy, width, height,
+is_head, is_enemy, confidence per slot). The detector itself runs on the
+full-resolution capture (`capture.keep_full_frame: true`) — at policy
+resolution YOLO would not see anything.
 
 To fine-tune YOLOv8 directly from a Roboflow dataset:
 

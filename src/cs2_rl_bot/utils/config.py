@@ -33,6 +33,9 @@ class CaptureConfig(BaseModel):
     # The model receives a downsampled frame for performance. (H, W) order.
     resize_to: tuple[int, int] = (84, 84)
     grayscale: bool = False
+    # Keep a copy of the full-resolution frame on each capture for the YOLO
+    # detector. Disabled if vision is off; saves a memcpy per frame.
+    keep_full_frame: bool = True
 
 
 class VisionConfig(BaseModel):
@@ -43,6 +46,9 @@ class VisionConfig(BaseModel):
     confidence_threshold: float = Field(0.35, ge=0.0, le=1.0)
     iou_threshold: float = Field(0.45, ge=0.0, le=1.0)
     device: Literal["cpu", "cuda", "auto"] = "auto"
+    # Number of enemy detections exposed to the policy each step. Detections
+    # are sorted by distance to the screen centre; extra slots are zero-padded.
+    max_enemy_slots: int = Field(4, ge=1, le=16)
 
 
 class ControllerConfig(BaseModel):
