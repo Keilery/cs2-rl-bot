@@ -17,6 +17,7 @@ from stable_baselines3.common.callbacks import CallbackList
 
 from cs2_rl_bot.agent.ppo_agent import PPOAgent
 from cs2_rl_bot.env.cs2_env import CS2Env
+from cs2_rl_bot.env.flat_action import FlatActionWrapper
 from cs2_rl_bot.training.callbacks import (
     MetricsCallback,
     RoundCheckpointCallback,
@@ -79,7 +80,8 @@ def train(
     reset_control(run)
     run.update_status("running")
 
-    env = CS2Env(config)
+    base_env = CS2Env(config)
+    env = FlatActionWrapper(base_env)
     env_config = _patch_agent_paths(config, run)
     agent = PPOAgent(env, env_config.agent)
 

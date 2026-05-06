@@ -9,13 +9,16 @@ from __future__ import annotations
 
 from cs2_rl_bot.agent.ppo_agent import build_agent
 from cs2_rl_bot.env.cs2_env import CS2Env
+from cs2_rl_bot.env.flat_action import FlatActionWrapper
 from cs2_rl_bot.utils.config import AppConfig
 from cs2_rl_bot.utils.logging import configure_logging, logger
 
 
 def run_inference(config: AppConfig, *, max_steps: int = 1000) -> None:
     configure_logging(config.log_level)
-    env = CS2Env(config)
+    base_env = CS2Env(config)
+    # SB3 PPO does not accept Dict action spaces — flatten only for that path.
+    env = FlatActionWrapper(base_env) if config.agent.algo == "ppo" else base_env
     agent = build_agent(config.agent.algo, env, config.agent)
 
     logger.info(
